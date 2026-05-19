@@ -1,0 +1,2446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Toy Dash to Grace — Race vs Tala</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #1a1033;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    touch-action: none;
+    overscroll-behavior: none;
+    position: fixed;
+  }
+  #gameWrap {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #ffd6f0 0%, #ffb8e0 50%, #ffa3d4 100%);
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    width: 100%;
+    height: 100%;
+    background: #ffb8e0;
+  }
+  #hud {
+    position: absolute;
+    top: max(10px, env(safe-area-inset-top));
+    left: 0; right: 0;
+    text-align: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 16px;
+    text-shadow: 2px 2px 0 #6b1f5a, -1px -1px 0 #6b1f5a, 1px -1px 0 #6b1f5a, -1px 1px 0 #6b1f5a;
+    pointer-events: none;
+    z-index: 5;
+    padding: 0 10px;
+    letter-spacing: 0.5px;
+  }
+  #hud .small { font-size: 12px; opacity: 0.95; display: block; margin-top: 2px; }
+  #controls {
+    position: absolute;
+    bottom: max(60px, calc(env(safe-area-inset-bottom) + 50px));
+    left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 14px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .pad { display: flex; gap: 12px; pointer-events: auto; }
+  .btn {
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.85);
+    border: 4px solid #6b1f5a;
+    color: #6b1f5a;
+    font-size: 26px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 0 rgba(107,31,90,0.6), inset 0 -3px 0 rgba(0,0,0,0.1);
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: transform 0.05s, background 0.05s;
+  }
+  .btn:active, .btn.pressed {
+    transform: translateY(3px);
+    background: #ffd6f0;
+    box-shadow: 0 1px 0 rgba(107,31,90,0.6);
+  }
+  .btn.jump {
+    width: 96px; height: 96px;
+    background: rgba(255,220,100,0.95);
+    border-color: #b85c00;
+    color: #b85c00;
+    font-size: 20px;
+  }
+  .btn.jump:active, .btn.jump.pressed {
+    background: #ffe680;
+  }
+  #restartBtn {
+    position: absolute;
+    top: max(10px, env(safe-area-inset-top));
+    right: 14px;
+    background: rgba(255,255,255,0.85);
+    border: 3px solid #6b1f5a;
+    color: #6b1f5a;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 13px;
+    z-index: 11;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(30, 10, 50, 0.7);
+    color: white;
+    z-index: 20;
+    padding: 20px;
+    text-align: center;
+  }
+  #overlay h1 { font-size: 32px; margin-bottom: 12px; text-shadow: 3px 3px 0 #6b1f5a; }
+  #overlay p { font-size: 18px; margin-bottom: 20px; }
+  #overlay .btns { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  #overlay button {
+    background: #ffdc64;
+    border: 4px solid #b85c00;
+    color: #6b1f5a;
+    font-weight: 900;
+    font-size: 22px;
+    padding: 14px 28px;
+    border-radius: 18px;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+    pointer-events: auto;
+    min-width: 220px;
+  }
+  #overlay button.secondary {
+    background: rgba(255,255,255,0.85);
+    border-color: #6b1f5a;
+    font-size: 16px;
+    padding: 10px 22px;
+    min-width: 0;
+  }
+  #overlay button:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+  #startMenu {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(30,10,50,0.85) 0%, rgba(107,31,90,0.85) 100%);
+    color: white;
+    z-index: 30;
+    padding: 20px;
+    text-align: center;
+  }
+  #startMenu h1 {
+    font-size: clamp(24px, 7vw, 40px);
+    margin-bottom: 6px;
+    color: #ffe680;
+    text-shadow: 3px 3px 0 #6b1f5a, -1px -1px 0 #6b1f5a;
+    letter-spacing: 1px;
+  }
+  #startMenu .sub {
+    font-size: clamp(13px, 3.5vw, 16px);
+    margin-bottom: 22px;
+    opacity: 0.95;
+    max-width: 90%;
+  }
+  #startMenu .pick {
+    font-size: 14px;
+    margin-bottom: 14px;
+    opacity: 0.9;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .diffBtns {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(280px, 80vw);
+  }
+  .diffBtn {
+    border: 4px solid #6b1f5a;
+    color: #6b1f5a;
+    font-weight: 900;
+    font-size: 22px;
+    padding: 14px 20px;
+    border-radius: 18px;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+    pointer-events: auto;
+    touch-action: manipulation;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+  .diffBtn small {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.8;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .diffBtn.easy   { background: #a8e6a3; }
+  .diffBtn.medium { background: #ffdc64; }
+  .diffBtn.hard   { background: #ff8a8a; }
+  .diffBtn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .modeRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    background: rgba(0,0,0,0.25);
+    padding: 6px;
+    border-radius: 14px;
+  }
+  .modeBtn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-weight: 800;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    pointer-events: auto;
+    touch-action: manipulation;
+    letter-spacing: 0.5px;
+  }
+  .modeBtn.active {
+    background: #ffe680;
+    color: #6b1f5a;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+  }
+  #charMenu {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(30,10,50,0.85) 0%, rgba(107,31,90,0.85) 100%);
+    color: white;
+    z-index: 30;
+    padding: 20px;
+    text-align: center;
+  }
+  #charMenu h1 {
+    font-size: clamp(22px, 6vw, 32px);
+    margin-bottom: 6px;
+    color: #ffe680;
+    text-shadow: 3px 3px 0 #6b1f5a, -1px -1px 0 #6b1f5a;
+  }
+  #charMenu .sub {
+    font-size: clamp(13px, 3.2vw, 15px);
+    margin-bottom: 20px;
+    opacity: 0.95;
+  }
+  .charCarousel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .arrowBtn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    border: 4px solid #6b1f5a;
+    color: #6b1f5a;
+    font-size: 26px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+    pointer-events: auto;
+    touch-action: manipulation;
+    flex-shrink: 0;
+  }
+  .arrowBtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.35); }
+  .charCard {
+    background: rgba(255,255,255,0.95);
+    border: 4px solid #6b1f5a;
+    color: #6b1f5a;
+    font-weight: 900;
+    border-radius: 20px;
+    padding: 12px 12px 14px;
+    width: min(200px, 56vw);
+    box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .charCard canvas {
+    width: 120px;
+    height: 200px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    background: #ffd6f0;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 2px solid #6b1f5a;
+  }
+  .charCard .name { font-size: 22px; }
+  .charCard .tag { font-size: 12px; font-weight: 700; opacity: 0.75; margin-top: 4px; text-align: center; }
+  .charDots {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .charDot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    transition: background 0.15s;
+  }
+  .charDot.active { background: #ffe680; }
+  .pickBtn {
+    background: #ffdc64;
+    border: 4px solid #b85c00;
+    color: #6b1f5a;
+    font-weight: 900;
+    font-size: 20px;
+    padding: 12px 32px;
+    border-radius: 18px;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+    pointer-events: auto;
+    touch-action: manipulation;
+    margin-bottom: 12px;
+  }
+  .pickBtn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .backBtn {
+    background: transparent;
+    border: 3px solid #ffe680;
+    color: #ffe680;
+    font-weight: 800;
+    padding: 8px 18px;
+    border-radius: 14px;
+    font-size: 14px;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+  .backBtn:active { transform: translateY(2px); }
+  #raceHud {
+    position: absolute;
+    top: max(40px, calc(env(safe-area-inset-top) + 30px));
+    left: 0; right: 0;
+    text-align: center;
+    color: white;
+    font-weight: 800;
+    font-size: 13px;
+    text-shadow: 2px 2px 0 #6b1f5a;
+    pointer-events: none;
+    z-index: 6;
+    display: none;
+  }
+  #raceHud .bar {
+    display: inline-block;
+    width: min(280px, 70vw);
+    height: 14px;
+    background: rgba(0,0,0,0.35);
+    border: 2px solid #fff;
+    border-radius: 8px;
+    position: relative;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  #raceHud .mark {
+    position: absolute;
+    top: -2px;
+    width: 6px;
+    height: 14px;
+    border-radius: 3px;
+  }
+  #raceHud .mark.you  { background: #7ec8ff; border: 1px solid #fff; }
+  #raceHud .mark.tala { background: #4caf50; border: 1px solid #fff; }
+</style>
+</head>
+<body>
+<div id="gameWrap">
+  <canvas id="game" width="800" height="450"></canvas>
+  <div id="hud">
+    <span id="hudMain">Help your character reach Grace!</span>
+    <span class="small" id="hudSub">Jump over obstacles and gaps →</span>
+  </div>
+  <button id="restartBtn">↻ Restart</button>
+  <div id="controls">
+    <div class="pad">
+      <div class="btn" id="leftBtn">◀</div>
+      <div class="btn" id="rightBtn">▶</div>
+    </div>
+    <div class="pad">
+      <div class="btn jump" id="jumpBtn">JUMP</div>
+    </div>
+  </div>
+  <div id="overlay">
+    <h1 id="overlayTitle">You made it to Grace!</h1>
+    <p id="overlaySub">Best friends together at the table 🎉</p>
+    <div class="btns">
+      <button id="nextLevelBtn">Next Level →</button>
+      <button id="playAgainBtn" class="secondary">Play Again</button>
+    </div>
+  </div>
+  <div id="startMenu">
+    <h1>Toy Dash to Grace</h1>
+    <p class="sub">Run, jump over toys & the well, and reach Grace at the table!</p>
+    <p class="pick">Choose mode</p>
+    <div class="modeRow">
+      <button class="modeBtn active" data-mode="solo">SOLO</button>
+      <button class="modeBtn" data-mode="vs">RACE vs TALA</button>
+    </div>
+    <p class="pick">Choose difficulty</p>
+    <div class="diffBtns">
+      <button class="diffBtn easy"   data-diff="easy">EASY<small>Slow & gentle — great for beginners</small></button>
+      <button class="diffBtn medium" data-diff="medium">MEDIUM<small>A bit faster</small></button>
+      <button class="diffBtn hard"   data-diff="hard">HARD<small>Zoom! Hold on tight</small></button>
+    </div>
+  </div>
+  <div id="charMenu">
+    <h1>Choose your character</h1>
+    <p class="sub">Tap the arrows to see them all</p>
+    <div class="charCarousel">
+      <button class="arrowBtn" id="charPrevBtn" type="button">◀</button>
+      <div class="charCard" id="charCard">
+        <canvas id="charPreviewCanvas" width="42" height="70"></canvas>
+        <div class="name" id="charName">Foz</div>
+        <div class="tag" id="charTag"></div>
+      </div>
+      <button class="arrowBtn" id="charNextBtn" type="button">▶</button>
+    </div>
+    <div class="charDots" id="charDots"></div>
+    <button class="pickBtn" id="charPickBtn" type="button">PLAY AS THIS CHARACTER</button>
+    <button class="backBtn" id="charBackBtn" type="button">← Back</button>
+  </div>
+  <div id="raceHud">
+    <div>🏁 RACE vs TALA — first to the chair wins!</div>
+    <div class="bar">
+      <div class="mark you"  id="markYou"  style="left:0%;"></div>
+      <div class="mark tala" id="markTala" style="left:0%;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // Logical resolution — we draw to this and the CSS scales it.
+  const W = 800, H = 450;
+
+  // ---------- Character registry ----------
+  // Same height/proportions for all characters — only colours and small head
+  // details change. To add a new character later, add another entry here and
+  // it will appear automatically in the character-select grid.
+  const CHARACTERS = {
+    foz: {
+      name: 'Foz',
+      tag: 'Blonde, blue suit',
+      skin: '#ffd9a0', hair: '#ffd84a', hairStyle: 'short',
+      top: '#7ec8ff', topLight: '#a8dcff', topDark: '#4a9cd9',
+      shirt: '#ffffff', shirtDetail: '#1a1a1a',
+      legs: '#5aa8e0', shoes: '#3a2a1a',
+      outfitType: 'shirt',
+    },
+    oscar: {
+      name: 'Oscar',
+      tag: 'Dark hair, navy jumper',
+      skin: '#ffd9a0', hair: '#3a2417', hairStyle: 'short',
+      top: '#1f3a8a', topLight: '#2f4ea8', topDark: '#142861',
+      shirt: null, shirtDetail: null,
+      legs: '#3a6fb8', shoes: '#7ec8ff',
+      outfitType: 'shirt',
+    },
+    ananya: {
+      name: 'Ananya',
+      tag: 'Ponytail, purple dress',
+      skin: '#8a5a3a', hair: '#1a1a1a', hairStyle: 'ponytail',
+      top: '#8a3fb8', topLight: '#a85fd4', topDark: '#5a2a80',
+      shirt: null, shirtDetail: null,
+      legs: '#8a3fb8', shoes: '#3a2a1a',
+      outfitType: 'dress',
+      skirtColor: '#8a3fb8', skirtDark: '#5a2a80',
+    },
+    isla: {
+      name: 'Isla',
+      tag: 'Light blue tee & jeans',
+      skin: '#ffd9a0', hair: '#6b4423', hairStyle: 'long',
+      top: '#90e0ff', topLight: '#b8edff', topDark: '#5fb0d4',
+      shirt: null, shirtDetail: null,
+      legs: '#3a6fb8', shoes: '#3a2a1a',
+      outfitType: 'shirt',
+    },
+    madison: {
+      name: 'Madison',
+      tag: 'Long hair, red dress',
+      skin: '#e0a878', hair: '#2a1810', hairStyle: 'long',
+      top: '#d63030', topLight: '#f25050', topDark: '#9c1010',
+      shirt: null, shirtDetail: null,
+      legs: '#d63030', shoes: '#3a2a1a',
+      outfitType: 'dress',
+      skirtColor: '#d63030', skirtDark: '#9c1010',
+    },
+    beau: {
+      name: 'Beau',
+      tag: 'T-Rex costume!',
+      skin: '#e0a878', hair: '#3a2417', hairStyle: 'short',
+      top: '#4caf50', topLight: '#7ed47e', topDark: '#2e7d32',
+      shirt: null, shirtDetail: null,
+      legs: '#4caf50', shoes: '#2e7d32',
+      outfitType: 'dino',
+      dinoBody: '#4caf50', dinoSpike: '#2e7d32', dinoBelly: '#a8e6a3',
+    },
+    evie: {
+      name: 'Evie',
+      tag: 'Chelsea football kit',
+      skin: '#e0a878', hair: '#1a1a1a', hairStyle: 'long',
+      top: '#034694', topLight: '#1a5fb0', topDark: '#012a5e',
+      shirt: null, shirtDetail: null,
+      legs: '#ffffff', shoes: '#1a1a1a',
+      outfitType: 'football',
+      sockColor: '#ffffff', sockBand: '#034694',
+    },
+    grace: {
+      name: 'Grace',
+      tag: 'Princess in pink',
+      skin: '#ffd9a0', hair: '#a87a4a', hairStyle: 'longCurly',
+      top: '#ff4f8b', topLight: '#ff8ab8', topDark: '#c93672',
+      shirt: null, shirtDetail: null,
+      legs: '#ff4f8b', shoes: '#d63030',
+      outfitType: 'dress',
+      skirtColor: '#ff4f8b', skirtDark: '#c93672',
+      accessory: 'crown', shoeStyle: 'heels',
+    },
+  };
+  let selectedChar = 'foz';
+
+  // Resize to keep aspect ratio fitting the device
+  function resize() {
+    const wrap = document.getElementById('gameWrap');
+    const aw = wrap.clientWidth;
+    const ah = wrap.clientHeight;
+    const targetRatio = W / H;
+    const screenRatio = aw / ah;
+    let cw, ch;
+    if (screenRatio > targetRatio) {
+      ch = ah;
+      cw = ah * targetRatio;
+    } else {
+      cw = aw;
+      ch = aw / targetRatio;
+    }
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+  resize();
+
+  // ---------- Game state ----------
+  const GROUND_Y = 340; // top of main ground
+
+  // Difficulty settings — affect speed and jump only. Level layout stays the same.
+  const DIFFICULTIES = {
+    // Player tuning
+    easy:   { moveSpeed: 1.5, jumpVel: -11.0, gravity: 0.36, airBonus: 0.6,
+              talaSpeed: 1.1, talaJump: -10.5, talaAir: 0.55, label: 'Easy' },
+    medium: { moveSpeed: 3.2, jumpVel: -11.5, gravity: 0.55, airBonus: 0.5,
+              talaSpeed: 2.9, talaJump: -11.5, talaAir: 0.5,  label: 'Medium' },
+    hard:   { moveSpeed: 4.4, jumpVel: -13.2, gravity: 0.70, airBonus: 0.4,
+              talaSpeed: 4.3, talaJump: -13.0, talaAir: 0.4,  label: 'Hard' },
+  };
+  let currentDifficulty = 'medium';
+  let MOVE_SPEED = DIFFICULTIES.medium.moveSpeed;
+  let JUMP_VEL   = DIFFICULTIES.medium.jumpVel;
+  let GRAVITY    = DIFFICULTIES.medium.gravity;
+  let AIR_BONUS  = DIFFICULTIES.medium.airBonus;
+
+  function setDifficulty(name) {
+    if (!DIFFICULTIES[name]) name = 'medium';
+    currentDifficulty = name;
+    const d = DIFFICULTIES[name];
+    MOVE_SPEED = d.moveSpeed;
+    JUMP_VEL   = d.jumpVel;
+    GRAVITY    = d.gravity;
+    AIR_BONUS  = d.airBonus;
+    tala.speed   = d.talaSpeed;
+    tala.jumpVel = d.talaJump;
+    tala.airBonus = d.talaAir;
+  }
+
+  const player = {
+    x: 60, y: GROUND_Y - 56,
+    w: 28, h: 56,
+    vx: 0, vy: 0,
+    onGround: false,
+    facing: 1,
+    walkFrame: 0,
+    spawnX: 60, spawnY: GROUND_Y - 56,
+  };
+
+  // Tala — the AI competitor in race mode.
+  // Slightly behind the player on x so the player can see her and they don't overlap.
+  const tala = {
+    x: 30, y: GROUND_Y - 56,
+    w: 28, h: 56,
+    vx: 0, vy: 0,
+    onGround: false,
+    walkFrame: 0,
+    spawnX: 30, spawnY: GROUND_Y - 56,
+    // tuned per-difficulty in setDifficulty()
+    speed: 2.8, jumpVel: -11.5, airBonus: 0.5,
+  };
+
+  let gameMode = 'solo'; // 'solo' or 'vs'
+
+  const input = { left: false, right: false, jump: false, jumpPressed: false };
+
+  let camX = 0;
+  let gameState = 'menu'; // 'menu', 'play', 'won', 'dead'
+  let deathTimer = 0;
+  let showLabel = true; // YOU label fades after a moment
+  let labelTimer = 0;
+  let timeMs = 0;
+
+  // ---------- Level design ----------
+  // Three levels, each ending at a different Grace location.
+  // Level 3 (the dining table) includes a present pickup just before the end.
+  const LEVELS = [
+    // ---------- LEVEL 1: Shopping centre → Build-a-Bear ----------
+    {
+      name: 'Shopping Centre',
+      background: 'mall',
+      levelEnd: 2590,
+      endKind: 'buildabear',
+      platforms: [
+        { x: 0,    y: GROUND_Y, w: 480,  h: 110 },
+        { x: 560,  y: GROUND_Y, w: 320,  h: 110 },
+        { x: 980,  y: GROUND_Y, w: 260,  h: 110 },
+        { x: 1280, y: GROUND_Y - 70, w: 90, h: 18 },
+        { x: 1430, y: GROUND_Y, w: 360,  h: 110 },
+        { x: 1870, y: GROUND_Y, w: 720,  h: 110 },
+      ],
+      obstacles: [
+        { x: 230,  type: 'teddy',   w: 34, h: 34 },
+        { x: 360,  type: 'block',   w: 28, h: 28 },
+        { x: 700,  type: 'ball',    w: 28, h: 28 },
+        { x: 820,  type: 'teddy',   w: 34, h: 34 },
+        { x: 1080, type: 'block',   w: 28, h: 28 },
+        { x: 1170, type: 'ball',    w: 28, h: 28 },
+        { x: 1500, type: 'teddy',   w: 34, h: 34 },
+        { x: 1620, type: 'block',   w: 28, h: 28 },
+        { x: 1720, type: 'ball',    w: 28, h: 28 },
+        { x: 2080, type: 'teddy',   w: 34, h: 34 },
+        { x: 2200, type: 'block',   w: 28, h: 28 },
+      ],
+      endZone: { storeX: 2350, graceX: 2470, graceY: GROUND_Y - 70, chairX: 2310, chairY: GROUND_Y - 56, chairW: 32, chairH: 56 },
+      present: null,
+    },
+    // ---------- LEVEL 2: Street with shops → Pizza Express ----------
+    {
+      name: 'High Street',
+      background: 'street',
+      levelEnd: 2790,
+      endKind: 'pizzaexpress',
+      platforms: [
+        { x: 0,    y: GROUND_Y, w: 520,  h: 110 },
+        { x: 620,  y: GROUND_Y, w: 280,  h: 110 },
+        { x: 1000, y: GROUND_Y, w: 240,  h: 110 },
+        { x: 1310, y: GROUND_Y - 70, w: 90, h: 18 },
+        { x: 1470, y: GROUND_Y, w: 320,  h: 110 },
+        { x: 1870, y: GROUND_Y, w: 280,  h: 110 },
+        { x: 2240, y: GROUND_Y - 70, w: 90, h: 18 },
+        { x: 2390, y: GROUND_Y, w: 400,  h: 110 },
+      ],
+      obstacles: [
+        { x: 240,  type: 'car',     w: 44, h: 24 },
+        { x: 380,  type: 'ball',    w: 28, h: 28 },
+        { x: 720,  type: 'car',     w: 44, h: 24 },
+        { x: 840,  type: 'block',   w: 28, h: 28 },
+        { x: 1100, type: 'car',     w: 44, h: 24 },
+        { x: 1180, type: 'ball',    w: 28, h: 28 },
+        { x: 1520, type: 'train',   w: 56, h: 30 },
+        { x: 1640, type: 'car',     w: 44, h: 24 },
+        { x: 1740, type: 'block',   w: 28, h: 28 },
+        { x: 1920, type: 'car',     w: 44, h: 24 },
+        { x: 2020, type: 'ball',    w: 28, h: 28 },
+      ],
+      endZone: { storeX: 2570, graceX: 2680, graceY: GROUND_Y - 70, chairX: 2530, chairY: GROUND_Y - 56, chairW: 32, chairH: 56 },
+      present: null,
+    },
+    // ---------- LEVEL 3: Playroom → dining table (with present) ----------
+    {
+      name: 'Toy Room',
+      background: 'playroom',
+      levelEnd: 2890,
+      endKind: 'table',
+      platforms: [
+        { x: 0,    y: GROUND_Y, w: 480,  h: 110 },
+        { x: 560,  y: GROUND_Y, w: 320,  h: 110 },
+        { x: 980,  y: GROUND_Y, w: 260,  h: 110 },
+        { x: 1280, y: GROUND_Y - 70, w: 90, h: 18 },
+        { x: 1430, y: GROUND_Y, w: 360,  h: 110 },
+        { x: 1870, y: GROUND_Y, w: 1020, h: 110 },
+      ],
+      obstacles: [
+        { x: 230,  type: 'teddy',   w: 34, h: 34 },
+        { x: 360,  type: 'block',   w: 28, h: 28 },
+        { x: 700,  type: 'car',     w: 44, h: 24 },
+        { x: 820,  type: 'ball',    w: 28, h: 28 },
+        { x: 1080, type: 'dino',    w: 40, h: 38 },
+        { x: 1170, type: 'block',   w: 28, h: 28 },
+        { x: 1500, type: 'robot',   w: 32, h: 40 },
+        { x: 1620, type: 'train',   w: 56, h: 30 },
+        { x: 1720, type: 'teddy',   w: 34, h: 34 },
+        { x: 1960, type: 'well',    w: 64, h: 42 },
+        { x: 2120, type: 'ball',    w: 28, h: 28 },
+        { x: 2200, type: 'car',     w: 44, h: 24 },
+      ],
+      endZone: {
+        // Same as the old design — table + chair + Grace
+        tableX: 2680, tableY: GROUND_Y - 50, tableW: 110, tableH: 50,
+        chairX: 2630, chairY: GROUND_Y - 44, chairW: 28, chairH: 44,
+        graceX: 2770, graceY: GROUND_Y - 70,
+      },
+      present: { x: 2440, y: GROUND_Y - 28, w: 28, h: 28 }, // sits on the ground before the chair
+    },
+  ];
+
+  // Current level state — these are reassigned by loadLevel().
+  let currentLevel = 0;
+  let platforms = LEVELS[0].platforms;
+  let obstacles = LEVELS[0].obstacles;
+  let endZone = LEVELS[0].endZone;
+  let LEVEL_END = LEVELS[0].levelEnd;
+  let presentState = null; // { x, y, w, h, collected }
+  let graceJoy = 0; // animation timer for Grace jumping after receiving present
+
+  function loadLevel(idx) {
+    currentLevel = idx;
+    const L = LEVELS[idx];
+    platforms = L.platforms;
+    obstacles = L.obstacles;
+    endZone = L.endZone;
+    LEVEL_END = L.levelEnd;
+    presentState = L.present ? Object.assign({}, L.present, { collected: false }) : null;
+    graceJoy = 0;
+    // Update on-screen HUD text per level
+    const hudMain = document.getElementById('hudMain');
+    const hudSub = document.getElementById('hudSub');
+    if (hudMain && hudSub) {
+      if (idx === 0) {
+        hudMain.textContent = 'Level 1: Meet Grace at Build-a-Bear!';
+        hudSub.textContent = 'Run through the shopping centre →';
+      } else if (idx === 1) {
+        hudMain.textContent = 'Level 2: Meet Grace at Pizza Express!';
+        hudSub.textContent = 'Dash down the high street →';
+      } else {
+        hudMain.textContent = 'Level 3: Bring Grace her present!';
+        hudSub.textContent = 'Grab the gift, then reach the chair →';
+      }
+    }
+  }
+  loadLevel(0);
+
+  // Background decorations — sized for the largest possible level so we don't
+  // need to regenerate them on level changes.
+  const MAX_LEVEL_END = Math.max.apply(null, LEVELS.map(l => l.levelEnd));
+  const clouds = [];
+  for (let i = 0; i < 14; i++) {
+    clouds.push({ x: Math.random() * MAX_LEVEL_END, y: 40 + Math.random() * 120, s: 0.4 + Math.random() * 0.6 });
+  }
+  const wallStars = [];
+  for (let i = 0; i < 60; i++) {
+    wallStars.push({ x: Math.random() * MAX_LEVEL_END, y: 30 + Math.random() * 250, t: Math.floor(Math.random()*3) });
+  }
+
+  // ---------- Input handling ----------
+  function bindButton(el, key) {
+    const press = (e) => {
+      e.preventDefault();
+      input[key] = true;
+      if (key === 'jump') input.jumpPressed = true;
+      el.classList.add('pressed');
+    };
+    const release = (e) => {
+      e.preventDefault();
+      input[key] = false;
+      el.classList.remove('pressed');
+    };
+    el.addEventListener('touchstart', press, { passive: false });
+    el.addEventListener('touchend', release, { passive: false });
+    el.addEventListener('touchcancel', release, { passive: false });
+    el.addEventListener('mousedown', press);
+    el.addEventListener('mouseup', release);
+    el.addEventListener('mouseleave', release);
+  }
+  bindButton(document.getElementById('leftBtn'), 'left');
+  bindButton(document.getElementById('rightBtn'), 'right');
+  bindButton(document.getElementById('jumpBtn'), 'jump');
+
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowLeft','a','A'].includes(e.key)) input.left = true;
+    if (['ArrowRight','d','D'].includes(e.key)) input.right = true;
+    if ([' ','ArrowUp','w','W'].includes(e.key)) {
+      if (!input.jump) input.jumpPressed = true;
+      input.jump = true;
+      e.preventDefault();
+    }
+    if (e.key === 'r' || e.key === 'R') restartGame();
+  });
+  document.addEventListener('keyup', (e) => {
+    if (['ArrowLeft','a','A'].includes(e.key)) input.left = false;
+    if (['ArrowRight','d','D'].includes(e.key)) input.right = false;
+    if ([' ','ArrowUp','w','W'].includes(e.key)) input.jump = false;
+  });
+
+  // Prevent page scroll on touch
+  document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+  document.getElementById('restartBtn').addEventListener('click', showStartMenu);
+  document.getElementById('restartBtn').addEventListener('touchend', (e) => { e.preventDefault(); showStartMenu(); });
+  document.getElementById('playAgainBtn').addEventListener('click', showStartMenu);
+  document.getElementById('playAgainBtn').addEventListener('touchend', (e) => { e.preventDefault(); showStartMenu(); });
+  document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
+  document.getElementById('nextLevelBtn').addEventListener('touchend', (e) => { e.preventDefault(); nextLevel(); });
+
+  // Mode toggle (SOLO vs RACE)
+  document.querySelectorAll('.modeBtn').forEach(btn => {
+    const pick = (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.modeBtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      gameMode = btn.getAttribute('data-mode');
+    };
+    btn.addEventListener('click', pick);
+    btn.addEventListener('touchend', pick, { passive: false });
+  });
+
+  // Difficulty menu buttons → open character select next
+  document.querySelectorAll('.diffBtn').forEach(btn => {
+    const pick = (e) => {
+      e.preventDefault();
+      const d = btn.getAttribute('data-diff');
+      setDifficulty(d);
+      showCharMenu();
+    };
+    btn.addEventListener('click', pick);
+    btn.addEventListener('touchend', pick, { passive: false });
+  });
+
+  // Back button on character menu
+  const charBackBtn = document.getElementById('charBackBtn');
+  const goBack = (e) => {
+    e.preventDefault();
+    document.getElementById('charMenu').style.display = 'none';
+    document.getElementById('startMenu').style.display = 'flex';
+  };
+  charBackBtn.addEventListener('click', goBack);
+  charBackBtn.addEventListener('touchend', goBack, { passive: false });
+
+  // Character carousel: one character at a time with arrow buttons to cycle.
+  const CHAR_KEYS = Object.keys(CHARACTERS);
+  let charIndex = 0;
+
+  function renderCharCard() {
+    const key = CHAR_KEYS[charIndex];
+    const c = CHARACTERS[key];
+    const cv = document.getElementById('charPreviewCanvas');
+    drawCharPreview(cv, c);
+    document.getElementById('charName').textContent = c.name;
+    document.getElementById('charTag').textContent = c.tag;
+    // Update dots
+    const dots = document.getElementById('charDots');
+    dots.innerHTML = '';
+    for (let i = 0; i < CHAR_KEYS.length; i++) {
+      const d = document.createElement('div');
+      d.className = 'charDot' + (i === charIndex ? ' active' : '');
+      dots.appendChild(d);
+    }
+  }
+
+  function bindTapBoth(el, handler) {
+    let touched = false;
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      touched = true;
+      handler();
+    }, { passive: false });
+    el.addEventListener('click', () => {
+      if (touched) { touched = false; return; }
+      handler();
+    });
+  }
+
+  function setupCharMenu() {
+    bindTapBoth(document.getElementById('charPrevBtn'), () => {
+      charIndex = (charIndex - 1 + CHAR_KEYS.length) % CHAR_KEYS.length;
+      renderCharCard();
+    });
+    bindTapBoth(document.getElementById('charNextBtn'), () => {
+      charIndex = (charIndex + 1) % CHAR_KEYS.length;
+      renderCharCard();
+    });
+    bindTapBoth(document.getElementById('charPickBtn'), () => {
+      selectedChar = CHAR_KEYS[charIndex];
+      document.getElementById('charMenu').style.display = 'none';
+      startGame();
+    });
+    renderCharCard();
+  }
+
+  function drawCharPreview(canvas, palette) {
+    const pctx = canvas.getContext('2d');
+    pctx.imageSmoothingEnabled = false;
+    pctx.fillStyle = '#ffd6f0';
+    pctx.fillRect(0, 0, canvas.width, canvas.height);
+    const pxFn = (a, b, c, d, color) => {
+      pctx.fillStyle = color;
+      pctx.fillRect(Math.floor(a), Math.floor(b), Math.floor(c), Math.floor(d));
+    };
+    drawCharacterBody(pxFn, 7, 6, 1, false, false, 0, palette);
+  }
+
+  function showCharMenu() {
+    document.getElementById('startMenu').style.display = 'none';
+    document.getElementById('charMenu').style.display = 'flex';
+    // Default carousel to the currently-selected character so revisiting feels natural
+    const idx = CHAR_KEYS.indexOf(selectedChar);
+    if (idx >= 0) charIndex = idx;
+    renderCharCard();
+  }
+
+  function showStartMenu() {
+    gameState = 'menu';
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('startMenu').style.display = 'flex';
+    document.getElementById('charMenu').style.display = 'none';
+    document.getElementById('raceHud').style.display = 'none';
+    // Reset input so leftover key state doesn't carry over
+    input.left = input.right = input.jump = input.jumpPressed = false;
+  }
+
+  setupCharMenu();
+
+  function startGame() {
+    document.getElementById('startMenu').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('raceHud').style.display = (gameMode === 'vs') ? 'block' : 'none';
+    loadLevel(0); // always start from level 1 when entering from the menu
+    resetEntities();
+    gameState = 'play';
+    deathTimer = 0;
+    showLabel = true;
+    labelTimer = 0;
+  }
+
+  // Used after a death — respawn at start of current level (keeps difficulty/mode/character)
+  function restartGame() {
+    document.getElementById('overlay').style.display = 'none';
+    loadLevel(currentLevel); // reset present pickup, Grace state, etc.
+    resetEntities();
+    gameState = 'play';
+    deathTimer = 0;
+    showLabel = true;
+    labelTimer = 0;
+  }
+
+  // Advance to the next level (called from the "Next Level" button)
+  function nextLevel() {
+    if (currentLevel < LEVELS.length - 1) {
+      loadLevel(currentLevel + 1);
+      document.getElementById('overlay').style.display = 'none';
+      resetEntities();
+      gameState = 'play';
+      deathTimer = 0;
+      showLabel = true;
+      labelTimer = 0;
+    }
+  }
+
+  function resetEntities() {
+    player.x = player.spawnX;
+    player.y = player.spawnY;
+    player.vx = 0; player.vy = 0;
+    player.onGround = false;
+    player.facing = 1;
+    tala.x = tala.spawnX;
+    tala.y = tala.spawnY;
+    tala.vx = 0; tala.vy = 0;
+    tala.onGround = false;
+    tala.walkFrame = 0;
+    camX = 0;
+  }
+
+  // ---------- Update ----------
+  function update(dt) {
+    timeMs += dt;
+    if (gameState !== 'play') {
+      if (gameState === 'dead') {
+        deathTimer += dt;
+        if (deathTimer > 700) restartGame();
+      }
+      return;
+    }
+
+    labelTimer += dt;
+    if (labelTimer > 4000) showLabel = false;
+
+    // Horizontal movement — slightly faster while airborne so jumps cover more ground
+    const speed = MOVE_SPEED * (player.onGround ? 1 : (1 + AIR_BONUS));
+    if (input.left && !input.right) { player.vx = -speed; player.facing = -1; }
+    else if (input.right && !input.left) { player.vx = speed; player.facing = 1; }
+    else player.vx = 0;
+
+    if (Math.abs(player.vx) > 0.1) player.walkFrame += 0.18;
+
+    // Jumping (only on press while grounded)
+    if (input.jumpPressed && player.onGround) {
+      player.vy = JUMP_VEL;
+      player.onGround = false;
+    }
+    input.jumpPressed = false;
+
+    // Gravity
+    player.vy += GRAVITY;
+    if (player.vy > 14) player.vy = 14;
+
+    // Move X with collision
+    player.x += player.vx;
+    if (player.x < 0) player.x = 0;
+
+    // Move Y with collision against platforms
+    let prevBottom = player.y + player.h - player.vy; // bottom before this y-step
+    player.y += player.vy;
+    player.onGround = false;
+
+    for (const p of platforms) {
+      const overlapsX = player.x + player.w > p.x && player.x < p.x + p.w;
+      if (!overlapsX) continue;
+      const playerBottom = player.y + player.h;
+      // Landing on top
+      if (player.vy >= 0 && prevBottom <= p.y + 1 && playerBottom >= p.y) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      }
+    }
+
+    // Fall off the bottom = die
+    if (player.y > H + 50) {
+      die();
+      return;
+    }
+
+    // Obstacle collision — use a tighter hitbox than the full sprite rect
+    // so the player only dies on actual visible contact, not near-misses.
+    const hit = {
+      x: player.x + 5,
+      y: player.y + 4,
+      w: player.w - 10,
+      h: player.h - 6,
+    };
+    for (const o of obstacles) {
+      const ox = o.x, oy = GROUND_Y - o.h;
+      // Shrink obstacle hitbox by 2px on each side too — gives a forgiving feel
+      const oRect = { x: ox + 2, y: oy + 2, w: o.w - 4, h: o.h - 4 };
+      if (rectsOverlap(hit, oRect)) {
+        die();
+        return;
+      }
+    }
+
+    // Present pickup (level 3 only)
+    if (presentState && !presentState.collected) {
+      const pRect = { x: presentState.x, y: presentState.y, w: presentState.w, h: presentState.h };
+      if (rectsOverlap(hit, pRect)) {
+        presentState.collected = true;
+      }
+    }
+
+    // Reach the chair = win.
+    // On the table level (level 3), the player must have collected the present first.
+    const chairRect = { x: endZone.chairX, y: endZone.chairY, w: endZone.chairW, h: endZone.chairH };
+    if (rectsOverlap(hit, chairRect)) {
+      const needsPresent = LEVELS[currentLevel].present !== null;
+      if (!needsPresent || (presentState && presentState.collected)) {
+        win();
+        return;
+      }
+    }
+
+    // ---------- Tala AI (race mode only) ----------
+    if (gameMode === 'vs') {
+      updateTala();
+      // Race progress HUD
+      const playerPct = Math.max(0, Math.min(100, (player.x / endZone.chairX) * 100));
+      const talaPct   = Math.max(0, Math.min(100, (tala.x   / endZone.chairX) * 100));
+      document.getElementById('markYou').style.left  = playerPct + '%';
+      document.getElementById('markTala').style.left = talaPct + '%';
+
+      // Tala reaches chair first
+      const chairRect = { x: endZone.chairX, y: endZone.chairY, w: endZone.chairW, h: endZone.chairH };
+      const talaHit = { x: tala.x + 5, y: tala.y + 4, w: tala.w - 10, h: tala.h - 6 };
+      if (rectsOverlap(talaHit, chairRect)) {
+        loseToTala();
+        return;
+      }
+    }
+
+    // Camera follows
+    const targetCam = player.x - W * 0.35;
+    camX += (targetCam - camX) * 0.15;
+    if (camX < 0) camX = 0;
+    if (camX > LEVEL_END - W) camX = LEVEL_END - W;
+  }
+
+  function rectsOverlap(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  function die() {
+    gameState = 'dead';
+    deathTimer = 0;
+  }
+  function win() {
+    gameState = 'won';
+    const L = LEVELS[currentLevel];
+    const isLast = (currentLevel >= LEVELS.length - 1);
+    let title, sub;
+    if (currentLevel === 0) {
+      title = 'You met Grace at Build-a-Bear!';
+      sub = (gameMode === 'vs')
+        ? 'You beat Tala there! Ready for the next level?'
+        : 'Time to head to the high street!';
+    } else if (currentLevel === 1) {
+      title = 'You met Grace at Pizza Express!';
+      sub = (gameMode === 'vs')
+        ? 'You beat Tala there! One level to go.'
+        : 'Last stop — the dining table!';
+    } else {
+      // Final level — present has been delivered, Grace celebrates.
+      graceJoy = 1; // trigger Grace jump animation
+      title = 'You made it to Grace!';
+      sub = (gameMode === 'vs')
+        ? 'You beat Tala AND gave Grace her present! 🎁'
+        : 'Grace loves her present — look at her jump! 🎁';
+    }
+    document.getElementById('overlayTitle').textContent = title;
+    document.getElementById('overlaySub').textContent = sub;
+    document.getElementById('nextLevelBtn').style.display = isLast ? 'none' : 'inline-block';
+    document.getElementById('playAgainBtn').textContent = isLast ? 'Play Again' : 'Replay Level';
+    document.getElementById('overlay').style.display = 'flex';
+  }
+  function loseToTala() {
+    gameState = 'won'; // freezes the world; same overlay
+    document.getElementById('overlayTitle').textContent = 'Tala got there first!';
+    document.getElementById('overlaySub').textContent = 'So close! Try again? 💨';
+    document.getElementById('nextLevelBtn').style.display = 'none';
+    document.getElementById('playAgainBtn').textContent = 'Try Again';
+    document.getElementById('overlay').style.display = 'flex';
+  }
+
+  // ---------- Tala AI ----------
+  // She tries to run right, jumping when an obstacle or gap is just ahead.
+  function updateTala() {
+    // Don't move once she's reached the chair area
+    if (tala.x > endZone.chairX - 4) tala.x = endZone.chairX - 4;
+
+    const speed = tala.speed * (tala.onGround ? 1 : (1 + tala.airBonus));
+    tala.vx = speed;
+    if (Math.abs(tala.vx) > 0.1) tala.walkFrame += 0.18;
+
+    // Lookahead: should Tala jump?
+    if (tala.onGround) {
+      const lookX = tala.x + tala.w + 6 + tala.speed * 10; // look further at higher speed
+      // 1) Obstacle directly ahead, low enough that she'd hit it
+      for (const o of obstacles) {
+        const oTop = GROUND_Y - o.h;
+        if (o.x < lookX + 12 && o.x + o.w > tala.x + tala.w - 2) {
+          // Toy is within imminent range — jump if she's not already over it
+          if (tala.y + tala.h > oTop - 4) {
+            tala.vy = tala.jumpVel;
+            tala.onGround = false;
+            break;
+          }
+        }
+      }
+      // 2) Gap ahead: if no platform underneath at lookX, jump
+      if (tala.onGround) {
+        const aheadFootX = tala.x + tala.w + 8;
+        let groundAhead = false;
+        for (const p of platforms) {
+          // Consider only ground platforms (large h) as walkable ground for the gap-check
+          if (p.h < 60) continue;
+          if (aheadFootX >= p.x && aheadFootX <= p.x + p.w) { groundAhead = true; break; }
+        }
+        if (!groundAhead) {
+          tala.vy = tala.jumpVel;
+          tala.onGround = false;
+        }
+      }
+      // 3) Stepping-stone block ahead and slightly above? Jump to land on it
+      if (tala.onGround) {
+        for (const p of platforms) {
+          if (p.h >= 60) continue; // only floating blocks
+          if (p.x < tala.x + tala.w + 40 && p.x + p.w > tala.x &&
+              p.y < GROUND_Y - 20 && p.y > GROUND_Y - 100) {
+            tala.vy = tala.jumpVel;
+            tala.onGround = false;
+            break;
+          }
+        }
+      }
+    }
+
+    // Gravity
+    tala.vy += GRAVITY;
+    if (tala.vy > 14) tala.vy = 14;
+
+    // Move X
+    tala.x += tala.vx;
+    // Move Y with platform collision
+    const prevBottom = tala.y + tala.h - tala.vy;
+    tala.y += tala.vy;
+    tala.onGround = false;
+    for (const p of platforms) {
+      const overlapsX = tala.x + tala.w > p.x && tala.x < p.x + p.w;
+      if (!overlapsX) continue;
+      const bottom = tala.y + tala.h;
+      if (tala.vy >= 0 && prevBottom <= p.y + 1 && bottom >= p.y) {
+        tala.y = p.y - tala.h;
+        tala.vy = 0;
+        tala.onGround = true;
+      }
+    }
+
+    // If Tala falls into a gap, snap her back to the last safe platform top.
+    // (She's the opponent, not the player — we don't want her to drop out of the race.)
+    if (tala.y > H + 20) {
+      // Find nearest platform start to the left of her current x and respawn there
+      let respawnX = tala.x;
+      let respawnY = GROUND_Y - tala.h;
+      for (let i = platforms.length - 1; i >= 0; i--) {
+        const p = platforms[i];
+        if (p.h < 60) continue;
+        if (p.x <= tala.x) {
+          respawnX = p.x + 8;
+          respawnY = p.y - tala.h;
+          break;
+        }
+      }
+      tala.x = respawnX;
+      tala.y = respawnY;
+      tala.vy = 0;
+    }
+  }
+
+  // ---------- Drawing helpers ----------
+  function px(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+  }
+
+  // ---------- Background ----------
+  function drawBackground() {
+    const bg = LEVELS[currentLevel].background;
+    if (bg === 'mall') return drawMallBackground();
+    if (bg === 'street') return drawStreetBackground();
+    return drawPlayroomBackground();
+  }
+
+  function drawPlayroomBackground() {
+    // Wallpaper gradient — playroom feel
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#ffd6f0');
+    grad.addColorStop(0.6, '#ffb8e0');
+    grad.addColorStop(1, '#ffa3d4');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Wallpaper stars (parallax)
+    for (const s of wallStars) {
+      const x = s.x - camX * 0.4;
+      if (x < -10 || x > W + 10) continue;
+      const colors = ['#ffe680', '#ffffff', '#ffc1e8'];
+      const c = colors[s.t];
+      px(x, s.y, 3, 3, c);
+      px(x - 3, s.y + 3, 3, 3, c);
+      px(x + 3, s.y + 3, 3, 3, c);
+      px(x, s.y + 6, 3, 3, c);
+    }
+    // Clouds (parallax)
+    for (const c of clouds) {
+      const x = c.x - camX * 0.5;
+      if (x < -80 || x > W + 80) continue;
+      drawCloud(x, c.y, c.s);
+    }
+    // Sub-floor visible through gaps — dark wood/shadow so gaps read as drops.
+    px(0, GROUND_Y, W, H - GROUND_Y, '#3a1f10');
+    // Faint plank lines in the depth so it doesn't look like a void
+    for (let i = 0; i < 30; i++) {
+      const wx = ((i * 80 - camX * 0.5) % W + W) % W;
+      px(wx, GROUND_Y + 20, 2, 8, '#5a3520');
+    }
+  }
+
+  function drawMallBackground() {
+    // Shopping centre — bright cream/cyan interior, glass ceiling, tiled floor
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#bae3f0');   // light glass roof
+    grad.addColorStop(0.4, '#e8f4f8');
+    grad.addColorStop(1, '#fff5e6');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Glass roof beams (parallax, far)
+    for (let i = 0; i < 30; i++) {
+      const bx = (i * 120 - camX * 0.3);
+      const x = ((bx % (W + 200)) + (W + 200)) % (W + 200) - 100;
+      px(x, 0, 4, 30, '#a0c8d8');
+      px(x + 60, 0, 4, 22, '#a0c8d8');
+    }
+    // Distant balcony row (parallax, mid)
+    for (let i = 0; i < 20; i++) {
+      const bx = (i * 200 - camX * 0.5);
+      const x = ((bx % (W + 400)) + (W + 400)) % (W + 400) - 200;
+      // upper level facade
+      px(x, 40, 180, 60, '#f0d8b8');
+      px(x, 40, 180, 4, '#b89878');
+      px(x, 96, 180, 4, '#b89878');
+      // storefront strips (decorative shops in the distance)
+      const shopColors = ['#ff8ab8', '#90e0ff', '#a8e6a3', '#ffdc64', '#c4a8e6'];
+      for (let j = 0; j < 4; j++) {
+        px(x + 10 + j * 42, 50, 36, 40, shopColors[(i + j) % shopColors.length]);
+        px(x + 14 + j * 42, 55, 28, 18, '#fff'); // window
+      }
+      // balcony railing
+      px(x, 100, 180, 4, '#888');
+      for (let j = 0; j < 18; j++) px(x + j * 10 + 2, 104, 2, 14, '#aaa');
+    }
+    // Hanging banner
+    for (let i = 0; i < 5; i++) {
+      const bx = ((i * 600 - camX * 0.7) % 3000 + 3000) % 3000 - 200;
+      px(bx, 20, 100, 30, '#ff4f8b');
+      px(bx + 4, 24, 92, 22, '#ffe680');
+      // "SALE" text-ish dots
+      px(bx + 12, 30, 4, 10, '#6b1f5a');
+      px(bx + 22, 30, 4, 10, '#6b1f5a');
+      px(bx + 32, 30, 4, 10, '#6b1f5a');
+      px(bx + 42, 30, 4, 10, '#6b1f5a');
+    }
+    // "Sub-floor" — below the walkway, visible through gaps.
+    // Darker than the floor itself so gaps clearly read as drops.
+    px(0, GROUND_Y, W, H - GROUND_Y, '#3a2a1a');
+    // Floor area is actually drawn per-platform — we just suggest depth here
+    // with a faint tile pattern receding into the gap.
+    for (let i = 0; i < 25; i++) {
+      const wx = ((i * 64 - camX * 0.5) % (W + 64) + (W + 64)) % (W + 64) - 32;
+      px(wx, GROUND_Y + 10, 2, 6, '#5a3a1a');
+    }
+  }
+
+  function drawStreetBackground() {
+    // Outdoor street — blue sky, road, shops on far side
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#8ed0ff');
+    grad.addColorStop(0.7, '#c8e8ff');
+    grad.addColorStop(1, '#e6f4ff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Clouds in the sky (parallax)
+    for (const c of clouds) {
+      const x = c.x - camX * 0.4;
+      if (x < -80 || x > W + 80) continue;
+      drawCloud(x, c.y, c.s);
+    }
+
+    // Far row of shops along the back, parallax
+    const shopColors = ['#e57373', '#64b5f6', '#ffb74d', '#81c784', '#ba68c8', '#ffd54f'];
+    const shopNames = ['CAFE', 'BAKERY', 'TOYS', 'BOOKS', 'SHOES', 'SWEETS'];
+    for (let i = 0; i < 12; i++) {
+      const sw = 200;
+      const bx = ((i * sw - camX * 0.6) % (W + 800) + (W + 800)) % (W + 800) - 400;
+      const sy = 150;
+      const sh = 190;
+      // wall
+      px(bx, sy, sw, sh, shopColors[i % shopColors.length]);
+      // roof
+      px(bx, sy - 8, sw, 8, '#5a3a1a');
+      px(bx - 4, sy - 4, sw + 8, 6, '#7a4a2a');
+      // sign band
+      px(bx, sy + 10, sw, 22, '#ffffff');
+      px(bx, sy + 10, sw, 3, '#222');
+      px(bx, sy + 30, sw, 2, '#222');
+      // sign text (drawn as small letter blocks)
+      ctx.fillStyle = '#222';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(shopNames[i % shopNames.length], bx + sw/2, sy + 21);
+      // big window
+      px(bx + 12, sy + 40, sw - 24, sh - 50, '#bedcf0');
+      // window cross
+      px(bx + sw/2 - 1, sy + 40, 2, sh - 50, '#777');
+      px(bx + 12, sy + 40 + (sh - 50)/2 - 1, sw - 24, 2, '#777');
+      // door
+      px(bx + sw - 50, sy + sh - 60, 30, 60, '#5a3a1a');
+      px(bx + sw - 25, sy + sh - 30, 3, 3, '#ffe680'); // handle
+    }
+
+    // Sub-floor — visible through gaps. Dark to read as a clear drop.
+    // The road texture is drawn UNDER the platforms via the pavement body in
+    // drawPlatforms, so here we just fill the area below GROUND_Y dark.
+    px(0, GROUND_Y, W, H - GROUND_Y, '#1a1a1a');
+    // Far-back road suggestion (visible in gaps) — faint dashed line so it
+    // still reads as "you've fallen into the road" rather than a void.
+    for (let i = 0; i < 30; i++) {
+      const dx = ((i * 80 - camX) % (W + 80) + (W + 80)) % (W + 80) - 40;
+      px(dx, GROUND_Y + 50, 30, 4, '#5a4a1a');
+    }
+  }
+
+  function drawCloud(x, y, s) {
+    const w = 40 * s, h = 16 * s;
+    px(x, y, w, h, '#ffffff');
+    px(x + w*0.2, y - h*0.4, w*0.6, h, '#ffffff');
+    px(x + w*0.4, y - h*0.7, w*0.3, h*0.7, '#ffffff');
+  }
+
+  // ---------- Platforms ----------
+  function drawPlatforms() {
+    const bg = LEVELS[currentLevel].background;
+    for (const p of platforms) {
+      const sx = p.x - camX;
+      if (sx + p.w < 0 || sx > W) continue;
+      if (p.h > 60) {
+        // Ground top — style depends on level background
+        if (bg === 'mall') {
+          // Solid tiled walkway body — fills the platform height so gaps clearly
+          // show the dark sub-floor in between.
+          px(sx, p.y - 4, p.w, 4, '#7ec8ff');         // cyan walkway carpet strip
+          px(sx, p.y, p.w, p.h, '#e0d4c0');           // floor tile body
+          px(sx, p.y, p.w, 3, '#ffffff');             // bright tile highlight
+          px(sx, p.y + 3, p.w, 2, '#d0c0a8');         // mid tile shade
+          // Tile seams across the surface
+          for (let i = 0; i < p.w; i += 48) {
+            px(sx + i, p.y, 2, p.h, '#b8a890');
+          }
+          // Strong vertical edges on the sides — show the drop
+          px(sx, p.y, 4, p.h, '#6b5a44');
+          px(sx + p.w - 4, p.y, 4, p.h, '#6b5a44');
+        } else if (bg === 'street') {
+          // Solid pavement body so gaps reveal the road below
+          px(sx, p.y, p.w, p.h, '#b0a8a0');           // pavement body
+          px(sx, p.y - 2, p.w, 2, '#444');            // top dark stripe
+          px(sx, p.y, p.w, 3, '#c8c0b8');             // curb highlight
+          px(sx, p.y + 3, p.w, 2, '#888');            // curb shadow
+          // Vertical edges show the kerb dropping to the road
+          px(sx, p.y, 3, p.h, '#444');
+          px(sx + p.w - 3, p.y, 3, p.h, '#444');
+        } else {
+          // Playroom grass + wooden floor body underneath
+          px(sx, p.y, p.w, p.h, '#c97f3a');          // wooden floor body
+          // Plank seams
+          for (let i = 0; i < p.w; i += 64) {
+            px(sx + i, p.y, 2, p.h, '#8a5524');
+          }
+          // Grass on top
+          px(sx, p.y, p.w, 6, '#7ecb3f');
+          px(sx, p.y + 6, p.w, 4, '#5fa92b');
+          // Side edges show the drop
+          px(sx, p.y, 3, p.h, '#6b3a18');
+          px(sx + p.w - 3, p.y, 3, p.h, '#6b3a18');
+          // Grass tufts on top
+          for (let i = 0; i < p.w; i += 28) {
+            px(sx + i + 4, p.y - 3, 3, 3, '#7ecb3f');
+            px(sx + i + 7, p.y - 5, 3, 5, '#7ecb3f');
+            px(sx + i + 10, p.y - 3, 3, 3, '#7ecb3f');
+          }
+        }
+      } else {
+        // Floating stepping stone — toy block
+        px(sx, p.y, p.w, p.h, '#ffb84d');
+        px(sx, p.y, p.w, 3, '#ffd99a');
+        px(sx, p.y + p.h - 3, p.w, 3, '#cc7a1a');
+        const cx = sx + p.w/2 - 5;
+        const cy = p.y + 3;
+        px(cx, cy, 3, 12, '#fff');
+        px(cx + 7, cy, 3, 12, '#fff');
+        px(cx, cy, 10, 3, '#fff');
+        px(cx, cy + 6, 10, 3, '#fff');
+      }
+    }
+  }
+
+  // ---------- Obstacles ----------
+  function drawObstacles() {
+    for (const o of obstacles) {
+      const sx = o.x - camX;
+      if (sx + o.w < -10 || sx > W + 10) continue;
+      const y = GROUND_Y - o.h;
+      switch (o.type) {
+        case 'teddy': drawTeddy(sx, y); break;
+        case 'block': drawBlock(sx, y); break;
+        case 'car':   drawCar(sx, y); break;
+        case 'ball':  drawBall(sx, y); break;
+        case 'dino':  drawDino(sx, y); break;
+        case 'robot': drawRobot(sx, y); break;
+        case 'train': drawTrain(sx, y); break;
+        case 'well':  drawWell(sx, y); break;
+      }
+    }
+  }
+
+  function drawTeddy(x, y) {
+    // ears
+    px(x+4, y, 6, 6, '#8a5524');
+    px(x+24, y, 6, 6, '#8a5524');
+    px(x+6, y+2, 3, 3, '#d49a6a');
+    px(x+25, y+2, 3, 3, '#d49a6a');
+    // head/body
+    px(x+4, y+5, 26, 14, '#a86a2c');
+    // muzzle
+    px(x+12, y+12, 10, 6, '#e0b88a');
+    // eyes
+    px(x+10, y+9, 3, 3, '#000');
+    px(x+21, y+9, 3, 3, '#000');
+    // nose
+    px(x+16, y+13, 2, 2, '#000');
+    // body
+    px(x+6, y+19, 22, 14, '#a86a2c');
+    px(x+10, y+22, 14, 8, '#d49a6a'); // belly
+    // feet
+    px(x+4, y+30, 8, 4, '#a86a2c');
+    px(x+22, y+30, 8, 4, '#a86a2c');
+  }
+
+  function drawBlock(x, y) {
+    px(x, y, 28, 28, '#4fc3f7');
+    px(x, y, 28, 3, '#90e0ff');
+    px(x, y+25, 28, 3, '#0d8ec5');
+    // letter B
+    px(x+8, y+6, 3, 16, '#fff');
+    px(x+8, y+6, 10, 3, '#fff');
+    px(x+8, y+12, 10, 3, '#fff');
+    px(x+8, y+19, 10, 3, '#fff');
+    px(x+17, y+8, 3, 5, '#fff');
+    px(x+17, y+15, 3, 5, '#fff');
+  }
+
+  function drawCar(x, y) {
+    // body
+    px(x, y+8, 44, 12, '#e63946');
+    // cabin
+    px(x+10, y, 22, 10, '#e63946');
+    // window
+    px(x+13, y+2, 16, 6, '#90e0ff');
+    // wheels
+    px(x+4, y+18, 10, 8, '#222');
+    px(x+30, y+18, 10, 8, '#222');
+    px(x+6, y+20, 6, 4, '#888');
+    px(x+32, y+20, 6, 4, '#888');
+    // headlight
+    px(x+40, y+10, 3, 3, '#ffe680');
+  }
+
+  function drawBall(x, y) {
+    px(x+8, y, 12, 4, '#ff4f8b');
+    px(x+4, y+4, 20, 4, '#fff');
+    px(x, y+8, 28, 4, '#ff4f8b');
+    px(x, y+12, 28, 4, '#fff');
+    px(x+4, y+16, 20, 4, '#ff4f8b');
+    px(x+8, y+20, 12, 4, '#fff');
+    // highlight
+    px(x+6, y+4, 3, 3, '#ffd0e0');
+  }
+
+  function drawDino(x, y) {
+    // body
+    px(x+4, y+14, 30, 18, '#4caf50');
+    // head
+    px(x+22, y+4, 18, 14, '#4caf50');
+    // spikes
+    px(x+8, y+10, 4, 4, '#2e7d32');
+    px(x+14, y+8, 4, 6, '#2e7d32');
+    px(x+20, y+10, 4, 4, '#2e7d32');
+    // eye
+    px(x+32, y+8, 3, 3, '#fff');
+    px(x+33, y+9, 2, 2, '#000');
+    // legs
+    px(x+8, y+30, 5, 6, '#2e7d32');
+    px(x+22, y+30, 5, 6, '#2e7d32');
+    // tail
+    px(x, y+18, 6, 6, '#4caf50');
+  }
+
+  function drawRobot(x, y) {
+    // antenna
+    px(x+14, y, 4, 4, '#bbb');
+    px(x+15, y-4, 2, 4, '#ff4f8b');
+    // head
+    px(x+6, y+4, 20, 12, '#cccccc');
+    px(x+10, y+8, 4, 4, '#ff4f8b');
+    px(x+18, y+8, 4, 4, '#90e0ff');
+    px(x+12, y+13, 8, 2, '#333');
+    // body
+    px(x+4, y+16, 24, 16, '#9e9e9e');
+    px(x+10, y+20, 12, 8, '#555');
+    px(x+12, y+22, 3, 3, '#ff4f8b');
+    px(x+18, y+22, 3, 3, '#ffe680');
+    // legs
+    px(x+6, y+32, 6, 8, '#777');
+    px(x+20, y+32, 6, 8, '#777');
+  }
+
+  function drawTrain(x, y) {
+    // main body
+    px(x+6, y+8, 34, 14, '#1976d2');
+    // cab
+    px(x+30, y, 18, 12, '#1976d2');
+    // window
+    px(x+34, y+3, 10, 6, '#90e0ff');
+    // smoke stack
+    px(x+10, y+2, 6, 8, '#333');
+    px(x+8, y+0, 10, 3, '#333');
+    // smoke
+    px(x+12, y-4, 4, 4, '#fff');
+    // wheels
+    px(x+4, y+20, 10, 10, '#222');
+    px(x+18, y+20, 10, 10, '#222');
+    px(x+34, y+20, 10, 10, '#222');
+    px(x+6, y+22, 6, 6, '#888');
+    px(x+20, y+22, 6, 6, '#888');
+    px(x+36, y+22, 6, 6, '#888');
+    // front
+    px(x, y+12, 6, 8, '#ffe680');
+  }
+
+  function drawWell(x, y) {
+    // stone base
+    px(x, y+14, 64, 28, '#8a8a8a');
+    // stone pattern
+    px(x+8, y+18, 14, 10, '#a0a0a0');
+    px(x+26, y+18, 14, 10, '#a0a0a0');
+    px(x+44, y+18, 14, 10, '#a0a0a0');
+    px(x+4, y+30, 14, 10, '#a0a0a0');
+    px(x+22, y+30, 14, 10, '#a0a0a0');
+    px(x+40, y+30, 14, 10, '#a0a0a0');
+    // dark hole
+    px(x+8, y+14, 48, 8, '#1a1a1a');
+    px(x+8, y+14, 48, 3, '#000');
+    // posts and roof
+    px(x+4, y, 5, 16, '#8a5524');
+    px(x+55, y, 5, 16, '#8a5524');
+    px(x, y-4, 64, 6, '#c0392b');
+    px(x+4, y-8, 56, 4, '#c0392b');
+    px(x+28, y-12, 8, 4, '#c0392b');
+    // beam shadow
+    px(x+8, y+2, 48, 2, '#6b1f1a');
+  }
+
+  // ---------- Player ----------
+  // Draws a character body using a provided pixel-fill function.
+  // pxFn(x, y, w, h, color) — lets us reuse this for both in-game (using px())
+  // and the preview canvas (using its own ctx).
+  function drawCharacterBody(pxFn, x, y, f, walking, jumping, frame, p) {
+    const headY = y;
+    const isDino = p.outfitType === 'dino';
+    const isDress = p.outfitType === 'dress';
+    const isFootball = p.outfitType === 'football';
+
+    // --- Hair BEHIND head (long styles need to extend down past head) ---
+    if (p.hairStyle === 'long' || p.hairStyle === 'longCurly') {
+      // Long hair behind shoulders
+      pxFn(x + 2, headY + 4, 4, 22, p.hair);   // left long strand
+      pxFn(x + 22, headY + 4, 4, 22, p.hair);  // right long strand
+      pxFn(x + 4, headY + 22, 20, 4, p.hair);  // bottom flick
+    } else if (p.hairStyle === 'ponytail') {
+      // Ponytail trailing behind (drawn to the back/side)
+      const tailX = (f === 1) ? x - 2 : x + 26;
+      pxFn(tailX, headY + 4, 4, 4, p.hair);
+      pxFn(tailX + (f === 1 ? -2 : 2), headY + 8, 4, 6, p.hair);
+      pxFn(tailX + (f === 1 ? -1 : 1), headY + 14, 3, 4, p.hair);
+    }
+
+    // --- Dino hood frames the face instead of hair ---
+    if (isDino) {
+      // Hood / dino head shape — green covers the top and sides
+      pxFn(x + 6, headY + 2, 16, 14, p.skin); // face shows through
+      // Hood top
+      pxFn(x + 2, headY - 4, 24, 8, p.dinoBody);
+      pxFn(x + 2, headY + 4, 4, 10, p.dinoBody);   // left jaw
+      pxFn(x + 22, headY + 4, 4, 10, p.dinoBody);  // right jaw
+      pxFn(x + 4, headY + 12, 22, 4, p.dinoBody);  // chin strap
+      // Spikes on hood
+      pxFn(x + 8, headY - 6, 3, 3, p.dinoSpike);
+      pxFn(x + 13, headY - 7, 3, 4, p.dinoSpike);
+      pxFn(x + 18, headY - 6, 3, 3, p.dinoSpike);
+      // Tiny dino teeth
+      pxFn(x + 10, headY + 12, 2, 2, '#ffffff');
+      pxFn(x + 14, headY + 12, 2, 2, '#ffffff');
+      pxFn(x + 18, headY + 12, 2, 2, '#ffffff');
+    } else {
+      // Skin / face base
+      pxFn(x + 6, headY + 2, 16, 14, p.skin);
+
+      // Hair top + bangs (style varies)
+      if (p.hairStyle === 'curly') {
+        // Puffy curly hair — extra bumps on top
+        pxFn(x + 2, headY - 2, 24, 8, p.hair);
+        pxFn(x + 0, headY, 4, 6, p.hair);
+        pxFn(x + 24, headY, 4, 6, p.hair);
+        pxFn(x + 4, headY - 4, 4, 4, p.hair);
+        pxFn(x + 12, headY - 5, 4, 4, p.hair);
+        pxFn(x + 20, headY - 4, 4, 4, p.hair);
+        pxFn(x + 5, headY + 6, 4, 4, p.hair); // side
+        pxFn(x + 19, headY + 6, 4, 4, p.hair);
+      } else if (p.hairStyle === 'longCurly') {
+        // Wavy/curly long hair — like Grace's
+        pxFn(x + 3, headY - 1, 22, 8, p.hair);
+        pxFn(x + 1, headY + 1, 4, 6, p.hair);
+        pxFn(x + 23, headY + 1, 4, 6, p.hair);
+        pxFn(x + 6, headY - 3, 4, 3, p.hair);
+        pxFn(x + 14, headY - 3, 4, 3, p.hair);
+        pxFn(x + 6, headY + 6, 3, 3, p.hair);
+        pxFn(x + 19, headY + 6, 3, 3, p.hair);
+      } else {
+        // Short or back of long/ponytail: standard cap shape
+        pxFn(x + 4, headY, 20, 8, p.hair);
+        pxFn(x + 4, headY - 2, 4, 4, p.hair);
+        pxFn(x + 20, headY - 2, 4, 4, p.hair);
+        pxFn(x + 6, headY + 6, 4, 3, p.hair);   // bangs
+        pxFn(x + 18, headY + 6, 4, 3, p.hair);
+        pxFn(x + 4, headY + 6, 2, 8, p.hair);   // side
+        pxFn(x + 22, headY + 6, 2, 8, p.hair);
+      }
+    }
+
+    // --- Crown accessory ---
+    if (p.accessory === 'crown') {
+      pxFn(x + 6, headY - 6, 16, 3, '#ffdc64');
+      pxFn(x + 6, headY - 9, 3, 3, '#ffdc64');
+      pxFn(x + 13, headY - 10, 4, 4, '#ffdc64');
+      pxFn(x + 19, headY - 9, 3, 3, '#ffdc64');
+      pxFn(x + 13, headY - 6, 2, 2, '#ff4f8b'); // jewel
+      pxFn(x + 7, headY - 4, 2, 2, '#90e0ff');
+      pxFn(x + 19, headY - 4, 2, 2, '#90e0ff');
+    }
+
+    // Eyes
+    if (f === 1) {
+      pxFn(x + 11, headY + 9, 2, 3, '#1a1a1a');
+      pxFn(x + 17, headY + 9, 2, 3, '#1a1a1a');
+    } else {
+      pxFn(x + 9, headY + 9, 2, 3, '#1a1a1a');
+      pxFn(x + 15, headY + 9, 2, 3, '#1a1a1a');
+    }
+    // Smile
+    pxFn(x + 12, headY + 13, 4, 1, '#a04020');
+
+    // Neck (dino covers this)
+    if (!isDino) {
+      pxFn(x + 11, headY + 16, 6, 2, p.skin);
+    }
+
+    // --- Body (top) ---
+    const bodyY = headY + 18;
+    pxFn(x + 4, bodyY, 20, 20, p.top);
+    pxFn(x + 4, bodyY, 20, 2, p.topLight);
+    pxFn(x + 4, bodyY + 18, 20, 2, p.topDark);
+
+    if (p.shirt) {
+      // Suit lapel/shirt panel (Foz)
+      pxFn(x + 12, bodyY, 4, 12, p.shirt);
+      if (p.shirtDetail) {
+        pxFn(x + 13, bodyY + 4, 2, 2, p.shirtDetail);
+        pxFn(x + 13, bodyY + 8, 2, 2, p.shirtDetail);
+      }
+    } else if (isDress) {
+      // Dress neckline V
+      pxFn(x + 12, bodyY, 4, 3, p.topDark);
+      pxFn(x + 13, bodyY + 3, 2, 2, p.topDark);
+    } else if (isDino) {
+      // Belly patch
+      pxFn(x + 9, bodyY + 4, 10, 12, p.dinoBelly);
+      pxFn(x + 10, bodyY + 6, 8, 2, p.dinoBody); // belly stripes
+      pxFn(x + 10, bodyY + 10, 8, 2, p.dinoBody);
+      // Back spikes (small bumps)
+      pxFn(x + 13, bodyY - 1, 4, 3, p.dinoSpike);
+    } else if (isFootball) {
+      // Chelsea-style: solid blue with subtle white trim and a numeral patch
+      pxFn(x + 4, bodyY + 2, 20, 2, '#ffffff');   // white chest band
+      pxFn(x + 12, bodyY + 8, 4, 8, p.topLight);  // jersey patch
+      pxFn(x + 13, bodyY + 10, 2, 4, '#ffffff');  // tiny number
+    } else {
+      // Plain jumper neckline
+      pxFn(x + 12, bodyY, 4, 3, p.topDark);
+      pxFn(x + 13, bodyY + 3, 2, 2, p.topDark);
+    }
+
+    // Arms
+    let armOffset = walking ? (frame === 0 ? 0 : 2) : 0;
+    if (jumping) armOffset = -3;
+    const armColor = isDino ? p.dinoBody : p.top;
+    pxFn(x + 0, bodyY + 2 + armOffset, 4, 14, armColor);
+    pxFn(x + 24, bodyY + 2 - armOffset, 4, 14, armColor);
+    // Hands (or dino claws)
+    if (isDino) {
+      pxFn(x + 0, bodyY + 14 + armOffset, 4, 4, p.dinoSpike);
+      pxFn(x + 24, bodyY + 14 - armOffset, 4, 4, p.dinoSpike);
+    } else {
+      pxFn(x + 0, bodyY + 14 + armOffset, 4, 4, p.skin);
+      pxFn(x + 24, bodyY + 14 - armOffset, 4, 4, p.skin);
+    }
+
+    // --- Legs ---
+    const legY = bodyY + 20;
+    if (isDress) {
+      // Skirt — flared triangle covering most of the leg area
+      pxFn(x + 2, legY, 24, 4, p.skirtColor);
+      pxFn(x + 1, legY + 4, 26, 4, p.skirtColor);
+      pxFn(x + 0, legY + 8, 28, 4, p.skirtColor);
+      pxFn(x + 2, legY, 24, 2, p.topLight);     // skirt highlight
+      pxFn(x + 0, legY + 10, 28, 2, p.skirtDark); // hem shadow
+      // Skin shins peek out below the skirt
+      pxFn(x + 7, legY + 12, 5, 4, p.skin);
+      pxFn(x + 16, legY + 12, 5, 4, p.skin);
+    } else if (isDino) {
+      // Green legs + tail behind (drawn from behind side)
+      const tailX = (f === 1) ? x - 6 : x + 28;
+      pxFn(tailX, legY - 2, 6, 4, p.dinoBody);
+      pxFn(tailX + (f === 1 ? -4 : 4), legY, 4, 4, p.dinoBody);
+      pxFn(tailX + (f === 1 ? -6 : 6), legY + 4, 4, 3, p.dinoBody);
+      // Legs (green)
+      if (jumping) {
+        pxFn(x + 6, legY, 7, 14, p.dinoBody);
+        pxFn(x + 15, legY, 7, 12, p.dinoBody);
+      } else if (walking) {
+        if (frame === 0) {
+          pxFn(x + 6, legY, 7, 14, p.dinoBody);
+          pxFn(x + 15, legY + 2, 7, 12, p.dinoBody);
+        } else {
+          pxFn(x + 6, legY + 2, 7, 12, p.dinoBody);
+          pxFn(x + 15, legY, 7, 14, p.dinoBody);
+        }
+      } else {
+        pxFn(x + 6, legY, 7, 14, p.dinoBody);
+        pxFn(x + 15, legY, 7, 14, p.dinoBody);
+      }
+    } else if (isFootball) {
+      // White shorts (top portion of legs)
+      pxFn(x + 5, legY, 9, 6, '#ffffff');
+      pxFn(x + 14, legY, 9, 6, '#ffffff');
+      // Lower legs (skin)
+      if (jumping) {
+        pxFn(x + 6, legY + 6, 7, 6, p.skin);
+        pxFn(x + 15, legY + 6, 7, 6, p.skin);
+      } else if (walking) {
+        if (frame === 0) {
+          pxFn(x + 6, legY + 6, 7, 8, p.skin);
+          pxFn(x + 15, legY + 8, 7, 6, p.skin);
+        } else {
+          pxFn(x + 6, legY + 8, 7, 6, p.skin);
+          pxFn(x + 15, legY + 6, 7, 8, p.skin);
+        }
+      } else {
+        pxFn(x + 6, legY + 6, 7, 8, p.skin);
+        pxFn(x + 15, legY + 6, 7, 8, p.skin);
+      }
+      // White socks with blue band
+      pxFn(x + 5, legY + 14, 9, 4, p.sockColor);
+      pxFn(x + 14, legY + 14, 9, 4, p.sockColor);
+      pxFn(x + 5, legY + 14, 9, 1, p.sockBand);
+      pxFn(x + 14, legY + 14, 9, 1, p.sockBand);
+    } else {
+      // Standard trousers
+      if (jumping) {
+        pxFn(x + 6, legY, 7, 14, p.legs);
+        pxFn(x + 15, legY, 7, 12, p.legs);
+      } else if (walking) {
+        if (frame === 0) {
+          pxFn(x + 6, legY, 7, 14, p.legs);
+          pxFn(x + 15, legY + 2, 7, 12, p.legs);
+        } else {
+          pxFn(x + 6, legY + 2, 7, 12, p.legs);
+          pxFn(x + 15, legY, 7, 14, p.legs);
+        }
+      } else {
+        pxFn(x + 6, legY, 7, 14, p.legs);
+        pxFn(x + 15, legY, 7, 14, p.legs);
+      }
+    }
+
+    // --- Shoes ---
+    if (p.shoeStyle === 'heels') {
+      // Red heels — small visible heel block at the back
+      pxFn(x + 5, legY + 16, 9, 2, p.shoes);
+      pxFn(x + 14, legY + 16, 9, 2, p.shoes);
+      pxFn(x + 5, legY + 14, 4, 2, p.shoes);     // heel back-left
+      pxFn(x + 19, legY + 14, 4, 2, p.shoes);    // heel back-right
+    } else if (isFootball) {
+      // Football boots: drawn under socks
+      if (jumping) {
+        pxFn(x + 5, legY + 16, 9, 2, p.shoes);
+        pxFn(x + 14, legY + 14, 9, 2, p.shoes);
+      } else if (walking && frame === 1) {
+        pxFn(x + 5, legY + 16, 9, 2, p.shoes);
+        pxFn(x + 14, legY + 18, 9, 2, p.shoes);
+      } else {
+        pxFn(x + 5, legY + 18, 9, 2, p.shoes);
+        pxFn(x + 14, legY + 18, 9, 2, p.shoes);
+      }
+    } else {
+      if (jumping) {
+        pxFn(x + 5, legY + 12, 9, 4, p.shoes);
+        pxFn(x + 14, legY + 10, 9, 4, p.shoes);
+      } else if (walking && frame === 1) {
+        pxFn(x + 5, legY + 12, 9, 4, p.shoes);
+        pxFn(x + 14, legY + 14, 9, 4, p.shoes);
+      } else {
+        pxFn(x + 5, legY + 14, 9, 4, p.shoes);
+        pxFn(x + 14, legY + 14, 9, 4, p.shoes);
+      }
+    }
+  }
+
+  function drawCharacterAt(entity, palette, opts) {
+    opts = opts || {};
+    const x = Math.floor(entity.x - camX);
+    const y = Math.floor(entity.y);
+    const f = entity.facing || 1;
+    const walking = Math.abs(entity.vx) > 0.1 && entity.onGround;
+    const jumping = !entity.onGround;
+    const frame = Math.floor(entity.walkFrame) % 2;
+
+    // Shadow
+    if (entity.onGround) {
+      px(x + 2, GROUND_Y - 2, entity.w - 4, 3, 'rgba(0,0,0,0.25)');
+    }
+
+    drawCharacterBody(px, x, y, f, walking, jumping, frame, palette);
+  }
+
+  function drawPlayer() {
+    drawCharacterAt(player, CHARACTERS[selectedChar] || CHARACTERS.foz);
+
+    // YOU label
+    if (showLabel) {
+      const x = Math.floor(player.x - camX);
+      const y = Math.floor(player.y);
+      const labelY = y - 28;
+      ctx.fillStyle = '#ffe680';
+      ctx.fillRect(x - 4, labelY, 36, 14);
+      ctx.fillStyle = '#6b1f5a';
+      ctx.fillRect(x - 4, labelY, 36, 2);
+      ctx.fillRect(x - 4, labelY + 12, 36, 2);
+      ctx.fillRect(x - 4, labelY, 2, 14);
+      ctx.fillRect(x + 30, labelY, 2, 14);
+      ctx.fillStyle = '#6b1f5a';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('YOU', x + 14, labelY + 7);
+      px(x + 12, labelY + 14, 8, 2, '#6b1f5a');
+      px(x + 13, labelY + 16, 6, 2, '#6b1f5a');
+      px(x + 14, labelY + 18, 4, 2, '#6b1f5a');
+      px(x + 15, labelY + 20, 2, 2, '#6b1f5a');
+    }
+  }
+
+  // ---------- End zone: Grace + table + chair ----------
+  function drawEndZone() {
+    const kind = LEVELS[currentLevel].endKind;
+    if (kind === 'buildabear') return drawEndZoneShop('Build-a-Bear', '#8b4a8e', '#ffb8e0');
+    if (kind === 'pizzaexpress') return drawEndZoneShop('Pizza Express', '#c91414', '#ffe680');
+    return drawEndZoneTable();
+  }
+
+  // Storefront end zones for levels 1 & 2: a shop facade with sign, Grace in front, chair next to her.
+  function drawEndZoneShop(signText, accentColor, signBg) {
+    const ez = endZone;
+    const stX = ez.storeX - camX;
+    const cx = ez.chairX - camX;
+    const cy = ez.chairY;
+    const gx = ez.graceX - camX;
+    const gy = ez.graceY;
+
+    // GRACE marker above the goal area
+    if (stX > -300 && stX < W + 300) {
+      const sparkT = (timeMs / 400) | 0;
+      for (let i = 0; i < 5; i++) {
+        const sx = stX + 30 + i * 30;
+        const sy = 60 + ((sparkT + i) % 4) * 3;
+        px(sx, sy, 3, 3, '#ffe680');
+        px(sx - 3, sy + 3, 3, 3, '#ffe680');
+        px(sx + 3, sy + 3, 3, 3, '#ffe680');
+        px(sx, sy + 6, 3, 3, '#ffe680');
+      }
+      ctx.fillStyle = '#6b1f5a';
+      ctx.fillRect(stX + 5, 90, 110, 22);
+      ctx.fillStyle = '#ffe680';
+      ctx.fillRect(stX + 7, 92, 106, 18);
+      ctx.fillStyle = '#6b1f5a';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('GRACE →', stX + 60, 101);
+    }
+
+    // --- Storefront facade ---
+    const sw = 220;
+    const sh = 220;
+    const sx = stX;
+    const sy = GROUND_Y - sh;
+    // walls
+    px(sx, sy, sw, sh, '#f0e4d0');
+    px(sx, sy, sw, 6, '#b89878');
+    // roof / awning
+    px(sx - 6, sy - 20, sw + 12, 20, accentColor);
+    // awning stripes (white)
+    for (let i = 0; i < 11; i++) {
+      px(sx - 6 + i * 22, sy - 20, 11, 20, '#ffffff');
+    }
+    // re-cover with awning frame
+    px(sx - 6, sy - 20, sw + 12, 4, accentColor);
+    px(sx - 6, sy - 4, sw + 12, 4, accentColor);
+
+    // Big sign
+    const signY = sy + 12;
+    px(sx + 10, signY, sw - 20, 32, signBg);
+    px(sx + 10, signY, sw - 20, 4, accentColor);
+    px(sx + 10, signY + 28, sw - 20, 4, accentColor);
+    ctx.fillStyle = accentColor;
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(signText, sx + sw/2, signY + 16);
+
+    // Window
+    const winY = signY + 44;
+    px(sx + 14, winY, sw - 28, sh - 100, '#bedcf0');
+    // window cross
+    px(sx + sw/2 - 1, winY, 2, sh - 100, '#888');
+    px(sx + 14, winY + (sh - 100)/2 - 1, sw - 28, 2, '#888');
+    // window highlight
+    px(sx + 18, winY + 4, 12, 12, '#ffffff');
+
+    // Door (open)
+    const doorW = 50, doorH = 64;
+    const doorX = sx + sw - doorW - 16;
+    const doorY = GROUND_Y - doorH;
+    px(doorX, doorY, doorW, doorH, '#5a3a1a');
+    px(doorX + 4, doorY + 4, doorW - 8, doorH - 8, '#2a1a08');
+    px(doorX + doorW - 10, doorY + doorH/2, 3, 3, '#ffe680'); // handle
+
+    // Shop-specific embellishment in the window
+    if (signText === 'Build-a-Bear') {
+      // A few teddy silhouettes
+      drawMiniTeddy(sx + 30, winY + 18);
+      drawMiniTeddy(sx + sw - 70, winY + 18);
+      drawMiniTeddy(sx + sw/2 - 14, winY + 50);
+    } else {
+      // Pizza Express: pizza pie in the window
+      drawMiniPizza(sx + sw/2 - 24, winY + 30);
+    }
+
+    // Chair next to Grace
+    drawChair(cx, cy);
+
+    // Grace standing in front of the shop (with optional jumping animation)
+    let graceOffsetY = 0;
+    if (graceJoy > 0) {
+      // Bouncy sine jump while joy timer is active
+      graceJoy += 1;
+      graceOffsetY = -Math.abs(Math.sin(graceJoy * 0.2)) * 18;
+    }
+    drawGrace(gx, gy + graceOffsetY);
+  }
+
+  function drawEndZoneTable() {
+    const ez = endZone;
+    const tx = ez.tableX - camX;
+    const ty = ez.tableY;
+    const cx = ez.chairX - camX;
+    const cy = ez.chairY;
+    const gx = ez.graceX - camX;
+    const gy = ez.graceY;
+
+    // GRACE banner
+    if (tx > -200 && tx < W + 200) {
+      const sparkT = (timeMs / 400) | 0;
+      for (let i = 0; i < 5; i++) {
+        const sx = tx + 30 + i * 30;
+        const sy = 60 + ((sparkT + i) % 4) * 3;
+        px(sx, sy, 3, 3, '#ffe680');
+        px(sx - 3, sy + 3, 3, 3, '#ffe680');
+        px(sx + 3, sy + 3, 3, 3, '#ffe680');
+        px(sx, sy + 6, 3, 3, '#ffe680');
+      }
+      ctx.fillStyle = '#6b1f5a';
+      ctx.fillRect(tx + 5, 90, 110, 22);
+      ctx.fillStyle = '#ffe680';
+      ctx.fillRect(tx + 7, 92, 106, 18);
+      ctx.fillStyle = '#6b1f5a';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('GRACE →', tx + 60, 101);
+    }
+
+    // Chair (target marker)
+    drawChair(cx, cy);
+    const t = (timeMs / 200) | 0;
+    if (t % 4 < 2) {
+      px(cx + 10, cy + 20, 8, 2, '#ffe680');
+      px(cx + 13, cy + 17, 2, 8, '#ffe680');
+    }
+
+    // Table
+    px(tx, ty, ez.tableW, 8, '#c97f3a');
+    px(tx, ty, ez.tableW, 3, '#e6a060');
+    px(tx + 4, ty + 8, ez.tableW - 8, 4, '#fff5e6');
+    px(tx + 6, ty + 8, 6, 42, '#8a5524');
+    px(tx + ez.tableW - 12, ty + 8, 6, 42, '#8a5524');
+    // Cake
+    const cakeX = tx + ez.tableW/2 - 12;
+    const cakeY = ty - 18;
+    px(cakeX, cakeY + 4, 24, 14, '#fff');
+    px(cakeX, cakeY + 4, 24, 3, '#ffb8e0');
+    px(cakeX + 2, cakeY, 4, 6, '#ffd84a');
+    px(cakeX + 3, cakeY - 3, 2, 3, '#ff4f00');
+    px(cakeX + 18, cakeY, 4, 6, '#ffd84a');
+    px(cakeX + 19, cakeY - 3, 2, 3, '#ff4f00');
+    // cups
+    px(tx + 10, ty - 8, 8, 8, '#90e0ff');
+    px(tx + 10, ty - 10, 8, 2, '#fff');
+    px(tx + ez.tableW - 18, ty - 8, 8, 8, '#ff4f8b');
+    px(tx + ez.tableW - 18, ty - 10, 8, 2, '#fff');
+
+    // Grace — possibly jumping for joy
+    let graceOffsetY = 0;
+    if (graceJoy > 0) {
+      graceJoy += 1;
+      graceOffsetY = -Math.abs(Math.sin(graceJoy * 0.2)) * 18;
+    }
+    drawGrace(gx, gy + graceOffsetY);
+  }
+
+  function drawChair(cx, cy) {
+    // Wooden chair facing left (kid sits next to Grace)
+    px(cx, cy + 24, 28, 6, '#8a5524');
+    px(cx, cy + 24, 28, 2, '#b87a3a');
+    px(cx + 2, cy, 6, 26, '#8a5524');
+    px(cx + 20, cy, 6, 26, '#8a5524');
+    px(cx + 2, cy, 24, 4, '#8a5524');
+    px(cx + 2, cy + 10, 24, 3, '#8a5524');
+    px(cx + 2, cy + 30, 4, 14, '#6b3a18');
+    px(cx + 22, cy + 30, 4, 14, '#6b3a18');
+  }
+
+  function drawMiniTeddy(x, y) {
+    px(x + 2, y, 4, 4, '#8a5524');
+    px(x + 14, y, 4, 4, '#8a5524');
+    px(x + 2, y + 3, 16, 8, '#a86a2c');
+    px(x + 6, y + 6, 2, 2, '#000');
+    px(x + 12, y + 6, 2, 2, '#000');
+    px(x + 4, y + 11, 12, 8, '#a86a2c');
+    px(x + 6, y + 13, 8, 4, '#d49a6a');
+  }
+
+  function drawMiniPizza(x, y) {
+    // Round-ish pizza on a plate
+    px(x + 4, y, 40, 4, '#ffe0a0'); // crust top
+    px(x, y + 4, 48, 18, '#ffe0a0');
+    px(x + 4, y + 22, 40, 4, '#ffe0a0');
+    // sauce
+    px(x + 4, y + 6, 40, 14, '#d63030');
+    // cheese spots
+    px(x + 8, y + 8, 6, 4, '#fff5b8');
+    px(x + 20, y + 7, 8, 4, '#fff5b8');
+    px(x + 34, y + 10, 6, 4, '#fff5b8');
+    px(x + 10, y + 16, 6, 3, '#fff5b8');
+    px(x + 28, y + 16, 8, 3, '#fff5b8');
+    // pepperoni
+    px(x + 14, y + 9, 4, 4, '#a01a1a');
+    px(x + 30, y + 12, 4, 4, '#a01a1a');
+    px(x + 18, y + 17, 4, 4, '#a01a1a');
+  }
+
+  // The present sits before the chair on level 3 — pick it up to deliver it to Grace.
+  function drawPresent() {
+    if (!presentState || presentState.collected) return;
+    const x = presentState.x - camX;
+    const y = presentState.y;
+    if (x + presentState.w < -10 || x > W + 10) return;
+    // Floating bob
+    const bob = Math.sin(timeMs / 300) * 2;
+    const py = y + bob;
+    // box
+    px(x + 2, py + 6, 24, 18, '#ff4f8b');
+    px(x + 2, py + 6, 24, 3, '#ff8ab8');
+    px(x + 2, py + 21, 24, 3, '#c93672');
+    // ribbon vertical
+    px(x + 12, py + 6, 4, 18, '#ffe680');
+    // ribbon horizontal
+    px(x + 2, py + 13, 24, 4, '#ffe680');
+    // bow on top
+    px(x + 10, py + 2, 8, 4, '#ffe680');
+    px(x + 8, py, 4, 4, '#ffe680');
+    px(x + 16, py, 4, 4, '#ffe680');
+    px(x + 13, py + 2, 2, 2, '#ffb800');
+    // sparkles around it
+    const sparkT = (timeMs / 200) | 0;
+    if (sparkT % 4 < 2) {
+      px(x - 4, py + 4, 2, 2, '#ffe680');
+      px(x + 28, py + 14, 2, 2, '#ffe680');
+      px(x + 4, py - 6, 2, 2, '#ffffff');
+    }
+    // "PRESENT →" hint floating above
+    ctx.fillStyle = '#6b1f5a';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillRect(x - 6, py - 18, 40, 12);
+    ctx.fillStyle = '#ffe680';
+    ctx.fillRect(x - 4, py - 16, 36, 8);
+    ctx.fillStyle = '#6b1f5a';
+    ctx.fillText('GIFT', x + 14, py - 12);
+  }
+
+  // Small "you've got the gift!" indicator above the player
+  function drawPresentCarried() {
+    if (!presentState || !presentState.collected) return;
+    if (gameState !== 'play') return;
+    const x = Math.floor(player.x - camX);
+    const y = Math.floor(player.y);
+    // tiny present floating above player's head
+    const bob = Math.sin(timeMs / 200) * 1.5;
+    const px0 = x + 4;
+    const py0 = y - 18 + bob;
+    px(px0, py0 + 4, 14, 10, '#ff4f8b');
+    px(px0, py0 + 4, 14, 2, '#ff8ab8');
+    px(px0 + 6, py0 + 4, 2, 10, '#ffe680');
+    px(px0, py0 + 8, 14, 2, '#ffe680');
+    px(px0 + 5, py0, 4, 4, '#ffe680');
+  }
+
+  function drawGrace(x, y) {
+    // She stands behind the table
+    // Head
+    px(x + 6, y + 4, 16, 14, '#ffd9a0');
+    // Hair — long brown
+    px(x + 4, y, 20, 8, '#7a4a1f');
+    px(x + 4, y - 2, 4, 4, '#7a4a1f');
+    px(x + 20, y - 2, 4, 4, '#7a4a1f');
+    px(x + 2, y + 6, 4, 18, '#7a4a1f'); // long left
+    px(x + 22, y + 6, 4, 18, '#7a4a1f'); // long right
+    px(x + 6, y + 6, 4, 3, '#7a4a1f'); // bangs
+    px(x + 18, y + 6, 4, 3, '#7a4a1f');
+    // small bow
+    px(x + 10, y - 1, 8, 3, '#ff4f8b');
+    px(x + 13, y - 2, 2, 5, '#ff4f8b');
+    // Eyes
+    px(x + 10, y + 10, 2, 3, '#1a1a1a');
+    px(x + 16, y + 10, 2, 3, '#1a1a1a');
+    // Smile
+    px(x + 12, y + 14, 4, 1, '#a04020');
+    // Neck
+    px(x + 11, y + 18, 6, 2, '#ffd9a0');
+    // Pink dress — top
+    px(x + 4, y + 20, 20, 14, '#ff4f8b');
+    px(x + 4, y + 20, 20, 2, '#ff8ab8');
+    // dress straps detail
+    px(x + 8, y + 20, 3, 2, '#ffb8d4');
+    px(x + 17, y + 20, 3, 2, '#ffb8d4');
+    // arms
+    px(x + 0, y + 22, 4, 12, '#ffd9a0');
+    px(x + 24, y + 22, 4, 12, '#ffd9a0');
+    // skirt — flared pink
+    px(x + 2, y + 34, 24, 16, '#ff4f8b');
+    px(x + 0, y + 42, 28, 8, '#ff4f8b');
+    px(x + 2, y + 34, 24, 2, '#ff8ab8');
+    px(x + 0, y + 48, 28, 2, '#d63a72');
+    // little hearts on dress
+    px(x + 8, y + 38, 2, 2, '#fff');
+    px(x + 11, y + 38, 2, 2, '#fff');
+    px(x + 9, y + 40, 3, 2, '#fff');
+    px(x + 10, y + 42, 1, 1, '#fff');
+    px(x + 18, y + 40, 2, 2, '#fff');
+    px(x + 21, y + 40, 2, 2, '#fff');
+    px(x + 19, y + 42, 3, 2, '#fff');
+    // shoes
+    px(x + 4, y + 50, 8, 4, '#6b1f5a');
+    px(x + 16, y + 50, 8, 4, '#6b1f5a');
+  }
+
+  // ---------- Tala (rival) ----------
+  // Black hair in a bun, green outfit. Same proportions as the player so they read as peers.
+  function drawTala() {
+    const x = Math.floor(tala.x - camX);
+    const y = Math.floor(tala.y);
+    const walking = Math.abs(tala.vx) > 0.1 && tala.onGround;
+    const jumping = !tala.onGround;
+    const frame = Math.floor(tala.walkFrame) % 2;
+
+    // Shadow
+    if (tala.onGround) {
+      px(x + 2, GROUND_Y - 2, tala.w - 4, 3, 'rgba(0,0,0,0.25)');
+    }
+
+    const headY = y;
+    // Head — skin
+    px(x + 6, headY + 2, 16, 14, '#f4c89a');
+    // Hair — black, framing the face
+    px(x + 4, headY, 20, 6, '#1a1a1a');
+    px(x + 4, headY + 4, 3, 10, '#1a1a1a');  // left side
+    px(x + 21, headY + 4, 3, 10, '#1a1a1a'); // right side
+    // Bun on top
+    px(x + 11, headY - 5, 6, 5, '#1a1a1a');
+    px(x + 10, headY - 4, 8, 4, '#1a1a1a');
+    px(x + 12, headY - 6, 4, 2, '#2a2a2a'); // bun highlight
+    // Hair tie (small green band where the bun meets the head)
+    px(x + 11, headY, 6, 2, '#2e7d32');
+
+    // Eyes (dark)
+    px(x + 10, headY + 9, 2, 3, '#1a1a1a');
+    px(x + 17, headY + 9, 2, 3, '#1a1a1a');
+    // Smile
+    px(x + 12, headY + 13, 4, 1, '#a04020');
+
+    // Neck
+    px(x + 11, headY + 16, 6, 2, '#f4c89a');
+
+    // Green top
+    const bodyY = headY + 18;
+    px(x + 4, bodyY, 20, 20, '#4caf50');
+    // shading
+    px(x + 4, bodyY, 20, 2, '#7ed47e');
+    px(x + 4, bodyY + 18, 20, 2, '#2e7d32');
+    // little leaf-like collar detail
+    px(x + 12, bodyY, 4, 4, '#2e7d32');
+    px(x + 13, bodyY + 4, 2, 2, '#fff'); // tiny button
+
+    // arms
+    let armOffset = walking ? (frame === 0 ? 0 : 2) : 0;
+    if (jumping) armOffset = -3;
+    px(x + 0, bodyY + 2 + armOffset, 4, 14, '#4caf50');
+    px(x + 24, bodyY + 2 - armOffset, 4, 14, '#4caf50');
+    // hands
+    px(x + 0, bodyY + 14 + armOffset, 4, 4, '#f4c89a');
+    px(x + 24, bodyY + 14 - armOffset, 4, 4, '#f4c89a');
+
+    // Green leggings/skirt — darker green
+    const legY = bodyY + 20;
+    if (jumping) {
+      px(x + 6, legY, 7, 14, '#2e7d32');
+      px(x + 15, legY, 7, 12, '#2e7d32');
+    } else if (walking) {
+      if (frame === 0) {
+        px(x + 6, legY, 7, 14, '#2e7d32');
+        px(x + 15, legY + 2, 7, 12, '#2e7d32');
+      } else {
+        px(x + 6, legY + 2, 7, 12, '#2e7d32');
+        px(x + 15, legY, 7, 14, '#2e7d32');
+      }
+    } else {
+      px(x + 6, legY, 7, 14, '#2e7d32');
+      px(x + 15, legY, 7, 14, '#2e7d32');
+    }
+    // shoes — white trainers
+    if (jumping) {
+      px(x + 5, legY + 12, 9, 4, '#ffffff');
+      px(x + 14, legY + 10, 9, 4, '#ffffff');
+    } else if (walking && frame === 1) {
+      px(x + 5, legY + 12, 9, 4, '#ffffff');
+      px(x + 14, legY + 14, 9, 4, '#ffffff');
+    } else {
+      px(x + 5, legY + 14, 9, 4, '#ffffff');
+      px(x + 14, legY + 14, 9, 4, '#ffffff');
+    }
+
+    // "TALA" mini-label above her (always on in race mode so the player can spot her)
+    if (gameMode === 'vs') {
+      const lx = x - 2, ly = y - 16;
+      ctx.fillStyle = '#2e7d32';
+      ctx.fillRect(lx, ly, 32, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('TALA', lx + 16, ly + 6);
+    }
+  }
+
+  // ---------- Death effect ----------
+  function drawDeathFlash() {
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.7 - deathTimer/1000) + ')';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#6b1f5a';
+    ctx.font = 'bold 28px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Oops! Try again...', W/2, H/2);
+  }
+
+  // ---------- Main draw ----------
+  function draw() {
+    drawBackground();
+    drawPlatforms();
+    drawObstacles();
+    drawPresent();
+    drawEndZone();
+    if (gameMode === 'vs') drawTala();
+    drawPlayer();
+    drawPresentCarried();
+    if (gameState === 'dead') drawDeathFlash();
+  }
+
+  // ---------- Loop ----------
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = Math.min(now - lastTime, 50);
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
