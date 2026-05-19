@@ -2,9 +2,6 @@
 
 A single-file HTML5 pixel-art platformer. Run, jump, and dash through three levels to meet Grace at Build-a-Bear, Pizza Express, and the dining table.
 
-## Play
-
-👉 **[Play the game](https://mattnourse.github.io/Graces8th/toy_dash_to_grace_vs_tala.html)**
 
 ## Features
 
