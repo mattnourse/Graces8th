@@ -4,7 +4,7 @@ A single-file HTML5 pixel-art platformer. Run, jump, and dash through three leve
 
 ## Play
 
-👉 **[Play the game](https://YOUR-USERNAME.github.io/YOUR-REPO/toy_dash_to_grace_vs_tala.html)**
+👉 **[Play the game](https://mattnourse.github.io/Graces8th/toy_dash_to_grace_vs_tala.html)**
 
 ## Features
 
