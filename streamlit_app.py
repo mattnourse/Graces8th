@@ -42,7 +42,7 @@ st.markdown(
 )
  
 # Load the game HTML
-html_path = Path(__file__).parent / "toy_dash_to_grace_vs_tala_1.html"
+html_path = Path(__file__).parent / "toy_dash_to_grace_vs_tala.html"
 html = html_path.read_text(encoding="utf-8")
  
 # Render with a generous height — the CSS above forces it to 100vh anyway.
